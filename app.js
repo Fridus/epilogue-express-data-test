@@ -40,16 +40,17 @@ var sequelize = new Sequelize('main', null, null, {
 var User = require('./models/user')(sequelize);
 var Project = require('./models/project')(sequelize);
 var Task = require('./models/task')(sequelize);
+var Address = require('./models/address')(sequelize);
 
 Project.hasMany(Task, {
   as: 'tasks',
   foreignKeyConstraint: true
 });
 Task.belongsTo(Project, {
-  foreignKey: {
-     //allowNull: false, //BUG MYSQL
-     //unique: true
-   },
+  // foreignKey: {
+  //    //allowNull: false, //BUG MYSQL
+  //    //unique: true
+  //  },
    constraints: true,
    as: 'project',
   foreignKeyConstraint: true
@@ -58,7 +59,8 @@ Task.belongsTo(Project, {
 Project.belongsToMany(User, {through: 'user_project'});
 User.belongsToMany(Project, {through: 'user_project'});
 
-//sequelize.sync();
+User.belongsTo(Address);
+
 
 sequelize.sync({force: true}).then(function () {
 
@@ -80,27 +82,42 @@ sequelize.sync({force: true}).then(function () {
     }));
   }
 
-  Promise.all(add).then(function(res) {
+  add.push(Address.create({
+    street: '221B Baker Street',
+    state_province: 'London',
+    postal_code: 'NW1',
+    country_code: '44'
+  }));
+
+  add.push(Address.create({
+    street: 'Rue Louis de Geer 6',
+    state_province: 'LLN',
+    postal_code: '1348',
+    country_code: '32'
+  }));
+
+  return Promise.all(add).then(function(res) {
     /*
       Users: 0,3,6,9,12
       Projects: 1,4,7,10,13
       Tasks: 2,5,8,11,14
+      Addresses: 15,16
     */
-    // User 1 -> Project 1 and 3
-    res[0].setProjects([res[1], res[7]]);
-    // User 2 -> Project 1 and 2
-    res[3].setProjects([res[1], res[4]]);
-    // User 3 -> Project 2
-    res[6].setProjects([res[4]]);
-
-    // Project 1 -> Task 1 and 3
-    res[1].setTasks([res[2], res[8]]);
-    // Project 2 -> Task 2 and 4
-    res[4].setTasks([res[5], res[11]]);
+    return Promise.all(
+      // User 1 -> Project 1 and 3
+      res[0].setProjects([res[1], res[7]]),
+      // User 2 -> Project 1 and 2
+      res[3].setProjects([res[1], res[4]]),
+      // User 3 -> Project 2
+      res[6].setProjects([res[4]]),
+      // Project 1 -> Task 1 and 3
+      res[1].setTasks([res[2], res[8]]),
+      // Project 2 -> Task 2 and 4
+      res[4].setTasks([res[5], res[11]]),
+      // User 1 -> Address 1
+      res[0].setAddress(res[15])
+    );
   });
-
-  // Tables created
-  return;
 });
 
 
@@ -119,21 +136,28 @@ var userResource = epilogue.resource({
     attributes: ['firstName', 'lastName']
   },
   //,pagination: false
-  associations: true
+  //associations: true
+  include: [Address]
 });
 epilogue.resource({
   model: Project,
   search: {
     attributes: ['title', 'description']
   },
-  associations: true
+  //associations: true
+  include: [{ model: Task, as: 'tasks' }]
 });
 epilogue.resource({
   model: Task,
   search: {
     attributes: ['title', 'description']
   },
-  associations: true
+  //associations: true
+  include: [{ model: Project, as: 'project' }]
+});
+
+epilogue.resource({
+  model: Address
 });
 
 app.get('/', function(req, res) {
