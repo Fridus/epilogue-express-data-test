@@ -4,7 +4,6 @@ var express = require('express'),
     epilogue = require('epilogue'),
     bodyParser = require('body-parser'),
     cors = require('cors'),
-    async = require('async'),
     Promise = Sequelize.Promise;
 
 var app = express();
@@ -136,24 +135,24 @@ var userResource = epilogue.resource({
     attributes: ['firstName', 'lastName']
   },
   //,pagination: false
-  //associations: true
-  include: [Address]
+  associations: true
+  //include: [Address]
 });
 epilogue.resource({
   model: Project,
   search: {
     attributes: ['title', 'description']
   },
-  //associations: true
-  include: [{ model: Task, as: 'tasks' }]
+  associations: true
+  //include: [{ model: Task, as: 'tasks' }]
 });
 epilogue.resource({
   model: Task,
   search: {
     attributes: ['title', 'description']
   },
-  //associations: true
-  include: [{ model: Project, as: 'project' }]
+  associations: true
+  //include: [{ model: Project, as: 'project' }]
 });
 
 epilogue.resource({
@@ -173,10 +172,6 @@ app.get('/', function(req, res) {
       route.stack.forEach(function(r){
         var method = r.method.toUpperCase();
         routes.push(method + space(8 - method.length) + route.path);
-        // routes.push({
-        //   method: method,
-        //   path: route.path
-        // });
       });
     }
   });
